@@ -35,26 +35,28 @@ def E_2(n, a, alpha, limit):
 	out = 0
 	for m in range(1, limit):
 		if m != n:
-			prefactor = mass * a**6 * alpha**2 / (8 * np.pi**6 * hbar**2 * (n**2 - m**2))
-			first  = (np.cos(np.pi * (m-n)) + 1) / (m-n)**2
-			second = (np.cos(np.pi * (m+n)) + 1) / (m+n)**2
-			out += prefactor * (first - second)**2
+			out += psi_0_m_V_psi_0_n(m,n,alpha,a)**2 / (E_0(n,a) - E_0(m, a))
 	return out
 
 
 a = 1
-alpha = 1000
+alpha = 5000
 dx = 0.01
 
-expansion = 40
+expansion = 100
 
 x = np.array([i*dx for i in range(int(a / dx))])
 
-#plt.plot(x, V(alpha, a, x))
-#plt.plot(x, psi_0(1,a,x))
-#plt.plot(x, psi_0(2,a,x))
-#plt.plot(x, psi_0(1,a,x) + psi_1(1, a, alpha, x, expansion))
-#plt.plot(x, psi_0(2,a,x) + psi_1(2, a, alpha, x, expansion))
+plt.plot(x, V(alpha, a, x))
+plt.plot(x, psi_0(1,a,x))
+plt.plot(x, psi_0(2,a,x))
+plt.plot(x, psi_0(3,a,x))
+plt.plot(x, psi_0(1,a,x) + psi_1(1, a, alpha, x, expansion))
+plt.plot(x, psi_0(2,a,x) + psi_1(2, a, alpha, x, expansion))
+plt.plot(x, psi_0(3,a,x) + psi_1(3, a, alpha, x, expansion))
+
+plt.show()
+
 
 dalpha = 0.1
 alpharange = np.array([i*dalpha for i in range(int(100000/dalpha))])
