@@ -5,23 +5,43 @@ import numpy as np
 import math
 from numpy import linalg as LA
 
-
+# Use Hartree atomic units
 mass = 1
 hbar = 1
 
+# Set the box width to 1
+a = 1
+
+# Define the range to calculate alpha over
+max_alpha = 100
+dalpha = 0.1
+alpharange = np.array([i*dalpha for i in range(int(max_alpha/dalpha))])
+
+# Show the contribution of each term of the sum of the 2nd order correction in PT for this alpha
+alpha = 100
+
+# Use this many terms of the sum in the 2nd order PT correction
+expansion = 15
+
+
 ### PERTURBATION THEORY
 
+# Returns < psi^0_m | V | psi^0_n >, for a given m, n, alpha and a
 def psi_0_m_V_psi_0_n(m,n, alpha, a):
-	first  = (np.cos(np.pi * (m-n)) + 1) / (m-n)**2
-	second = (np.cos(np.pi * (m+n)) + 1) / (m+n)**2
-	return (alpha * a**3 / (4 * np.pi**2)) * (first - second)
+	first  = (np.cos(np.pi * (m-n)) + 1) / ((m-n)**2)
+	second = (np.cos(np.pi * (m+n)) + 1) / ((m+n)**2)
+	return (alpha * a / (np.pi**2)) * (first - second)
 
+# Returns the perturbation potential
 def V(alpha, a, x):
 	return alpha * abs(x-a/2)
 
+# Returns the uncorrected wavefunction
 def psi_0(n, a, x):
 	return np.sqrt(2/a) * np.sin(n*np.pi*x/a)
 
+# Returns the 1st-order PT correction of the wave function
+# Stops the sum at limit
 def psi_1(n, a, alpha, x, limit):
 	#sum(m != n) psi_0_m_V_psi_0_n / (E_0_n - E_0_m)  * psi_0_m
 	out = 0
@@ -30,12 +50,16 @@ def psi_1(n, a, alpha, x, limit):
 			out += psi_0_m_V_psi_0_n(m,n, alpha, a) * psi_0(m, a, x) / (E_0(n, a) - E_0(m, a))
 	return out
 
+# Returns the uncorrected energy
 def E_0(n, a):
 	return n**2 * np.pi**2 * hbar**2 / (2 * mass * a**2)
 
+# Returns the 1st order PT correction of the energy
 def E_1(n, a, alpha):
 	return alpha * a * (1/2 + ((-1)**n - 1) / (n**2 * np.pi**2)) / 2
 
+# Returns the 2nd order PT correction of the energy
+# Stops the sum at limit
 def E_2(n, a, alpha, limit):
 	out = 0
 	for m in range(1, limit):
@@ -44,48 +68,29 @@ def E_2(n, a, alpha, limit):
 	return out
 
 
-a = 1
-max_alpha = 100
-alpha = 15
-#dx = 0.01
-#
-expansion = 15
-#
-#x = np.array([i*dx for i in range(int(a / dx))])
-#
-##plt.plot(x, V(alpha, a, x))
-##plt.plot(x, psi_0(1,a,x))
-##plt.plot(x, psi_0(2,a,x))
-##plt.plot(x, psi_0(3,a,x))
-#plt.plot(x, psi_0(1,a,x) + psi_1(1, a, alpha, x, expansion))
-#plt.plot(x, psi_0(2,a,x) + psi_1(2, a, alpha, x, expansion))
-##plt.plot(x, psi_0(3,a,x) + psi_1(3, a, alpha, x, expansion))
-#
-#plt.show()
-#
-dalpha = 0.1
-alpharange = np.array([i*dalpha for i in range(int(max_alpha/dalpha))])
-#
-#plt.plot(alpharange, [E_0(1, a) for i in alpharange], label="E_0")
-#plt.plot(alpharange, E_0(1, a) + E_1(1, a, alpharange), label="E_1")
-#plt.plot(alpharange, E_0(1, a) + E_1(1, a, alpharange) + E_2(1, a, alpharange, expansion), label="Ground state PT")
-#plt.plot(alpharange, E_0(2, a) + E_1(2, a, alpharange) + E_2(2, a, alpharange, expansion), label="1st excited PT")
-#plt.xlabel("\\alpha")
-#plt.ylabel("Energy (a.u)")
-#plt.plot(x, psi_0(3,a,x) + psi_1(3, a, alpha, x, expansion))
-#plt.legend()
-#plt.show()
+# Plot the PT corrections of the ground state
+corrs1 = []
+corrs2 = []
+for i in range(0, 200):
+	corrs1.append(E_1(1, a, i) + E_2(1, a, i, expansion))
+	corrs2.append(E_1(2, a, i) + E_2(2, a, i, expansion))
+plt.plot(range(0,200), corrs1, label="Ground state correction")
+plt.plot(range(0,200), corrs2, label="1st excited state correction")
+plt.legend()
+plt.xlabel("$\\alpha$")
+plt.ylabel("Correction energy (a.u.)")
+plt.show()
 
 
+# Plot the 2nd order PT energy correction, stopping the sum at different points
+# We use this to justify stopping the sum early.
 diff = []
 for i in range(4, 21):
 	diff.append(E_2(1,a,alpha,i))
-	#diff.append((E_2(1, a, alpha, i) - E_2(1, a, alpha, i-1)) / E_2(1, a, alpha, i-1))
 plt.plot(range(4,21), diff, 'x-')
 plt.xlabel("Number of sum terms")
-plt.ylabel("Second-order PT correction (Energy, a.u.)")
+plt.ylabel("Second-order PT energy correction (a.u.)")
 plt.show()
-
 
 
 ## EXACT DIAGONALISATION
@@ -109,6 +114,8 @@ def Calc_Eigenenergies(alpha): # the coupling between neighboring elements
     sorted_eigenvectors = np.transpose(unsorted_eigenvectors)[sortorder] #Transpose is needed because of the way eig and eigh return the eigenvectors.
     sorted_eigenvalues = unsorted_eigenvalues[sortorder]
     return sorted_eigenvalues[0:2]
+
+
 for x in range(0,max_alpha):
     Eig_Energies1.append(Calc_Eigenenergies(x)[0])
     Eig_Energies2.append(Calc_Eigenenergies(x)[1])
@@ -128,7 +135,7 @@ plt.figure(figsize=(16,12))
 plt.plot(n_range,Eig_Energies1)
 plt.plot(n_range, Eig_Energies2)
 plt.xlabel('$\\alpha$', fontsize=20)
-plt.ylabel('Energy (Hartree units)', fontsize=20)
+plt.ylabel('Energy (a.u.)', fontsize=20)
 
 plt.plot(alpharange, E_0(1, a) + E_1(1, a, alpharange) + E_2(1, a, alpharange, expansion), label="Ground state PT")
 plt.plot(alpharange, E_0(2, a) + E_1(2, a, alpharange) + E_2(2, a, alpharange, expansion), label="1st excited PT")
